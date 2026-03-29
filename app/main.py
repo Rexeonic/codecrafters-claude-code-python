@@ -21,6 +21,25 @@ def main():
     chat = client.chat.completions.create(
         model="anthropic/claude-haiku-4.5",
         messages=[{"role": "user", "content": args.p}],
+        tools=[
+            {
+                "type": "function",     # always "function" for tools
+                "function": {
+                    "name": "Read",
+                    "description": "Read and return the contents of a file",
+                    "parameters": {     # JSON schema describing the function's parameters
+                    "type": "object",
+                    "properties": {     # Defines parameter to the function
+                        "file_path": {
+                        "type": "string",
+                        "description": "The path to the file to read"
+                        }
+                    },
+                    "required": ["file_path"]   # Lists which parameters are mandatory
+                    }
+                }
+            }
+    ]
     )
 
     if not chat.choices or len(chat.choices) == 0:
