@@ -19,59 +19,74 @@ def main():
 
     client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
-    chat = client.chat.completions.create(
-        model="anthropic/claude-haiku-4.5",
-        messages=[{"role": "user", "content": args.p}],
-        tools=[
-            {
-                "type": "function",     # always "function" for tools
-                "function": {
-                    "name": "Read",
-                    "description": "Read and return the contents of a file",
-                    "parameters": {     # JSON schema describing the function's parameters
-                    "type": "object",
-                    "properties": {     # Defines parameter to the function
-                        "file_path": {
-                        "type": "string",
-                        "description": "The path to the file to read"
+
+    # Initialize the conversation
+    messages = [{"role": "user", "content": args.p}]     # message array 
+    # Agentic Loop
+    while True:
+
+        chat = client.chat.completions.create(
+            model="anthropic/claude-haiku-4.5",
+            messages=messages,
+            tools=[
+                {
+                    "type": "function",     # always "function" for tools
+                    "function": {
+                        "name": "Read",
+                        "description": "Read and return the contents of a file",
+                        "parameters": {     # JSON schema describing the function's parameters
+                        "type": "object",
+                        "properties": {     # Defines parameter to the function
+                            "file_path": {
+                            "type": "string",
+                            "description": "The path to the file to read"
+                            }
+                        },
+                        "required": ["file_path"]   # Lists which parameters are mandatory
                         }
-                    },
-                    "required": ["file_path"]   # Lists which parameters are mandatory
                     }
                 }
-            }
-    ]
-    )
+            ]
+        )
 
-    if not chat.choices or len(chat.choices) == 0:
-        raise RuntimeError("no choices in response")
+        response = chat.choices[0].message
 
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!", file=sys.stderr)
+        message_dict = {
+            "role": response.role,
+            "content": response.content,
+        }
 
-    # Executing the READ Tool
-    tool_calls = chat.choices[0].message.tool_calls
-    if tool_calls:  # if tool_calls array in the response
-        tool_call_1 = tool_calls[0]
-        f_name = tool_call_1.function.name
+        if hasattr(response, "tool_calls") and response.tool_calls:
+            message_dict["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": tc.type,
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in response.tool_calls
+            ]
+        messages.append(message_dict)
 
-        # parse json string
-        json_arg = tool_call_1.function.arguments
-        arg = json.loads(json_arg)
+        if not message_dict.get("tool_calls"):
+            print(response.content)
+            break
 
-        match f_name.lower():
-            case "read":
-                file_path = arg.get("file_path", "")
+        for tc in response.tool_calls:
+            args_dict = json.loads(tc.function.arguments)
 
-                with open(file_path, 'r') as f:
-                    content = f.read()
-
-                print(content)
-            case _:
-                print("Tool doesn't exists")
-    else:
-        print(chat.choices[0].message.content)
-
+            if tc.function.name == "Read":
+                with open(args_dict["file_path"]) as f:
+                    result = f.read()
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": result,
+                    }
+                )
 
 if __name__ == "__main__":
     main()
