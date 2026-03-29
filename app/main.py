@@ -45,7 +45,29 @@ def main():
                         "required": ["file_path"]   # Lists which parameters are mandatory
                         }
                     }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "Write",
+                        "description": "Write content to a file",
+                        "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "file_path": {
+                            "type": "string",
+                            "description": "The path of the file to write to"
+                            },
+                            "content": {
+                            "type": "string",
+                            "description": "The content to write to the file"
+                            }
+                        },
+                        "required": ["file_path", "content"]
+                        }
+                    }
                 }
+
             ]
         )
 
@@ -85,6 +107,20 @@ def main():
                         "role": "tool",
                         "tool_call_id": tc.id,
                         "content": result,
+                    }
+                )
+
+            if tc.function.name == "Write":
+                content = args_dict["content"]
+                with open(args_dict["file_path"], 'w') as f:
+                    f.write(content)
+
+                messages.append(
+                    {
+
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": content,
                     }
                 )
 

@@ -93,3 +93,9 @@ b. Add each tool call result to your messages array. Every tool result must
 5. Repeat until complete:
 
 Continue the loop until the model responds without requesting any tools (when `tool_calls` is missing or empty). At this point, print the final message `content` to stdout and exit.
+
+
+Write Tool
+----------
+
+`Write` tool enables the LLM to write content to files. Like with the Read tool, you need to advertise the Write tool in your request and execute it when the model requests it.
