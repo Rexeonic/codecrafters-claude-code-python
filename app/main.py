@@ -1,5 +1,7 @@
 import argparse
 import os
+import shlex
+import subprocess
 import sys
 import json 
 
@@ -66,6 +68,23 @@ def main():
                         "required": ["file_path", "content"]
                         }
                     }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "Bash",
+                        "description": "Execute a shell command",
+                        "parameters": {
+                        "type": "object",
+                        "required": ["command"],
+                        "properties": {
+                            "command": {
+                            "type": "string",
+                            "description": "The command to execute"
+                          }
+                        }
+                      }
+                   }
                 }
 
             ]
@@ -117,10 +136,27 @@ def main():
 
                 messages.append(
                     {
-
                         "role": "tool",
                         "tool_call_id": tc.id,
                         "content": content,
+                    }
+                )
+
+            if tc.function.name == "Bash":
+                command = args_dict["command"]
+                
+                result = subprocess.run(command.split(" "), capture_output=True, text=True)
+                
+                if result.stderr:
+                    result = result.stderr
+                else:
+                    result = result.stdout
+                
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": result,
                     }
                 )
 
